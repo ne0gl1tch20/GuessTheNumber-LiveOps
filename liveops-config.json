@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "hostApiVersion": 1,
+  "minAppVersionCode": 19,
+  "maxAppVersionCode": 999999,
+  "bundleVersion": 1,
+  "scripts": [
+    {
+      "id": "welcome",
+      "fileName": "welcome.lua",
+      "title": "Welcome activity",
+      "description": "A small example LiveOps activity that writes a message to the game log.",
+      "featured": true,
+      "hostApiVersion": 1,
+      "capabilities": ["log"]
+    }
+  ]
+}
