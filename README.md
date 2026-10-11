@@ -10,7 +10,9 @@ This repository publishes signed Lua activity bundles for the Android app [Guess
 4. Confirm the [Publish LiveOps workflow](.github/workflows/publish-liveops.yml) completes successfully.
 5. In the app's Lua Activity Hub, refresh the signed LiveOps bundle and test the activity.
 
-The app treats a refresh of the already-active version as “already up to date” and rejects lower versions to preserve rollback protection. To restore previous script content, publish that content with a new, higher version.
+The app treats a refresh of the already-active version as “already up to date”. The publisher also verifies the previous signed manifest and rejects changed payload bytes unless the new bundle version is strictly higher. The app keeps a separate highest-accepted-version marker, so switching to a previously verified cached bundle for recovery does not lower anti-rollback protection. To restore previous script content, publish that content with a new, higher version.
+
+Pull requests run the **Validate LiveOps content** workflow. It checks the config and script files and tests duplicate IDs, duplicate filenames, unsafe paths, empty scripts and bundle-version progression. The app repository has a separate workflow for Android unit tests and lint. Offline, interrupted-download and cache-tampering checks are documented in the app's [LiveOps reliability test plan](https://github.com/ne0gl1tch20/GuessTheNumber/blob/master/docs/LIVEOPS_RELIABILITY_TEST_PLAN.md).
 
 ## Lua activity contract
 
