@@ -19,7 +19,7 @@ SCRIPTS_DIR = ROOT / "scripts"
 MAX_SCRIPTS = 50
 MAX_SCRIPT_BYTES = 32_768
 ID_PATTERN = re.compile(r"[a-z0-9_-]{1,64}")
-FILE_PATTERN = re.compile(r"[a-zA-Z0-9_-]{1,80}\\.lua")
+FILE_PATTERN = re.compile(r"[a-zA-Z0-9_-]{1,80}\.lua")
 
 
 def fail(message: str) -> "NoReturn":
@@ -168,7 +168,7 @@ def main() -> None:
         "payloadBase64": base64.b64encode(payload_bytes).decode("ascii"),
         "signatureBase64": base64.b64encode(signature).decode("ascii"),
     }
-    MANIFEST_PATH.write_text(json.dumps(envelope, indent=2) + "\\n", encoding="utf-8")
+    MANIFEST_PATH.write_text(json.dumps(envelope, indent=2) + "\n", encoding="utf-8")
     print(f"Signed manifest written: {MANIFEST_PATH.name}")
     print(f"Bundle version: {payload['bundleVersion']}")
     print(f"Lua scripts: {len(payload['scripts'])}")
