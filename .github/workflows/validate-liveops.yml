@@ -1,0 +1,41 @@
+name: Validate LiveOps content
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - "liveops-config.json"
+      - "scripts/**"
+      - "tools/**"
+      - "tests/**"
+      - ".github/workflows/validate-liveops.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validation dependency
+        run: python -m pip install --disable-pip-version-check cryptography
+      - name: Validate publisher and version rules
+        run: python -m unittest discover -s tests -v
+      - name: Validate current bundle configuration
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from tools.publish_liveops import build_payload
+          config = json.loads(Path("liveops-config.json").read_text(encoding="utf-8"))
+          payload = build_payload(config, Path("scripts"))
+          print(f"Validated bundle {payload['bundleVersion']} with {len(payload['scripts'])} scripts.")
+          PY
