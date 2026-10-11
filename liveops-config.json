@@ -3,7 +3,7 @@
   "hostApiVersion": 1,
   "minAppVersionCode": 19,
   "maxAppVersionCode": 999999,
-  "bundleVersion": 1,
+  "bundleVersion": 2,
   "scripts": [
     {
       "id": "welcome",
@@ -12,7 +12,9 @@
       "description": "A small example LiveOps activity that writes a message to the game log.",
       "featured": true,
       "hostApiVersion": 1,
-      "capabilities": ["log"]
+      "capabilities": [
+        "log"
+      ]
     }
   ]
 }
