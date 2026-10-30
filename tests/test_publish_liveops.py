@@ -62,6 +62,43 @@ class PublishLiveOpsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must be 1 to"):
             build_payload(config, self.scripts_dir)
 
+
+    def test_build_payload_includes_valid_signed_event_catalog(self):
+        event = {
+            "id": "winter_event", "title": "Winter Event", "description": "Seasonal rewards",
+            "status": "UPCOMING", "startDate": "2026-11-01T00:00:00Z",
+            "endDate": "2026-12-31T23:59:59Z", "currencyName": "Nebula",
+            "maxClaims": 5, "rewardNebula": 10, "permanentBoostPerClaim": 1,
+            "minCorrectGuesses": 100, "minPrestigeCount": 0, "minUltraCount": 0,
+        }
+        config = config_for([entry("welcome", "welcome.lua")])
+        config.update({"eventManifestVersion": 2, "events": [event]})
+        payload = build_payload(config, self.scripts_dir)
+        self.assertEqual(payload["eventManifestVersion"], 2)
+        self.assertEqual(payload["events"], [event])
+
+    def test_build_payload_rejects_duplicate_event_ids(self):
+        event = {
+            "id": "winter_event", "title": "Winter Event", "description": "Seasonal rewards",
+            "status": "UPCOMING", "startDate": "2026-11-01T00:00:00Z",
+            "endDate": "2026-12-31T23:59:59Z", "currencyName": "Nebula", "maxClaims": 5,
+        }
+        config = config_for([entry("welcome", "welcome.lua")])
+        config["events"] = [event, dict(event)]
+        with self.assertRaisesRegex(ValueError, "Duplicate event ID"):
+            build_payload(config, self.scripts_dir)
+
+    def test_build_payload_rejects_naive_or_reversed_event_dates(self):
+        event = {
+            "id": "winter_event", "title": "Winter Event", "description": "Seasonal rewards",
+            "status": "UPCOMING", "startDate": "2026-12-31T23:59:59",
+            "endDate": "2026-11-01T00:00:00", "currencyName": "Nebula", "maxClaims": 5,
+        }
+        config = config_for([entry("welcome", "welcome.lua")])
+        config["events"] = [event]
+        with self.assertRaisesRegex(ValueError, "timezone-aware dates"):
+            build_payload(config, self.scripts_dir)
+
     def test_changed_payload_requires_higher_bundle_version(self):
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         old_payload = {

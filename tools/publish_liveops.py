@@ -2,6 +2,7 @@
 """Validate and publish a SHA-256-checked, RSA-signed LiveOps manifest."""
 
 import base64
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -45,6 +46,52 @@ def build_payload(config: dict, scripts_dir: Path) -> dict:
         raise ValueError("bundleVersion must be positive")
     if config["minAppVersionCode"] < 1 or config["maxAppVersionCode"] < config["minAppVersionCode"]:
         raise ValueError("Invalid app compatibility range")
+
+    event_manifest_version = config.get("eventManifestVersion", 1)
+    if not isinstance(event_manifest_version, int) or isinstance(event_manifest_version, bool) or event_manifest_version not in (1, 2):
+        raise ValueError("eventManifestVersion must be 1 or 2")
+    configured_events = config.get("events", [])
+    if not isinstance(configured_events, list) or len(configured_events) > 32:
+        raise ValueError("events must contain 0 to 32 entries")
+    event_ids = set()
+    events = []
+    for item in configured_events:
+        if not isinstance(item, dict):
+            raise ValueError("Each event entry must be an object")
+        event_id = item.get("id", "")
+        if not isinstance(event_id, str) or not ID_PATTERN.fullmatch(event_id):
+            raise ValueError(f"Invalid event ID: {event_id!r}")
+        if event_id in event_ids:
+            raise ValueError(f"Duplicate event ID: {event_id}")
+        event_ids.add(event_id)
+        for key, maximum in (("title", 100), ("description", 500), ("currencyName", 32)):
+            value = item.get(key)
+            if not isinstance(value, str) or not value.strip() or len(value) > maximum:
+                raise ValueError(f"Event {event_id} {key} must be 1 to {maximum} characters")
+        status = item.get("status")
+        if status not in ("UPCOMING", "ACTIVE", "ENDING", "ARCHIVED"):
+            raise ValueError(f"Event {event_id} has an invalid status")
+        try:
+            start = datetime.fromisoformat(item["startDate"].replace("Z", "+00:00"))
+            end = datetime.fromisoformat(item["endDate"].replace("Z", "+00:00"))
+            if start.tzinfo is None or end.tzinfo is None or end <= start:
+                raise ValueError
+        except (KeyError, TypeError, AttributeError, ValueError) as exc:
+            raise ValueError(f"Event {event_id} has invalid timezone-aware dates") from exc
+        normalized = {"id": event_id, "title": item["title"], "description": item["description"],
+                      "status": status, "startDate": item["startDate"], "endDate": item["endDate"],
+                      "currencyName": item["currencyName"]}
+        limits = {"maxClaims": (1, 10000), "rewardNebula": (0, 2**63 - 1),
+                  "permanentBoostPerClaim": (0, 2**31 - 1), "minCorrectGuesses": (0, 2**63 - 1),
+                  "minPrestigeCount": (0, 2**63 - 1), "minUltraCount": (0, 2**63 - 1)}
+        defaults = {"rewardNebula": 10, "permanentBoostPerClaim": 1, "minCorrectGuesses": 0,
+                    "minPrestigeCount": 0, "minUltraCount": 0}
+        for key, (minimum, maximum) in limits.items():
+            value = item.get(key, defaults.get(key))
+            if not isinstance(value, int) or isinstance(value, bool) or not minimum <= value <= maximum:
+                raise ValueError(f"Event {event_id} has invalid {key}")
+            normalized[key] = value
+        events.append(normalized)
 
     scripts = config.get("scripts")
     if not isinstance(scripts, list) or not 1 <= len(scripts) <= MAX_SCRIPTS:
@@ -110,6 +157,8 @@ def build_payload(config: dict, scripts_dir: Path) -> dict:
         "minAppVersionCode": config["minAppVersionCode"],
         "maxAppVersionCode": config["maxAppVersionCode"],
         "bundleVersion": config["bundleVersion"],
+        "eventManifestVersion": event_manifest_version,
+        "events": events,
         "scripts": entries,
     }
 
